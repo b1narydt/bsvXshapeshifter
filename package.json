@@ -1,0 +1,23 @@
+{
+  "name": "shapeshifter-bsv-bridge",
+  "version": "1.0.0",
+  "description": "BSV Overlay Network for Shapeshifter UFTP messages with identity and certificates",
+  "main": "simplified-index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node simplified-index.js"
+  },
+  "dependencies": {
+    "@bsv/overlay": "latest",
+    "@bsv/overlay-express": "latest",
+    "@bsv/sdk": "latest",
+    "@bsv/wallet-toolbox": "^1.2.2",
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "crypto-browserify": "^3.12.1",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "stream-browserify": "^3.0.0",
+    "xml2js": "^0.6.2"
+  }
+}
