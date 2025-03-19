@@ -1,8 +1,8 @@
 import { TopicManager } from '@bsv/overlay'
 
-export default class UftpMessageTopicManager extends TopicManager {
-async identifyAdmissibleOutputs(tx, outputs) {
-const admissibleOutputs = []
+export default class UftpMessageTopicManager implements TopicManager {
+  async identifyAdmissibleOutputs(tx, outputs) {
+    const admissibleOutputs = []
 
     for (let i = 0; i < outputs.length; i++) {
       const output = outputs[i]
@@ -24,31 +24,26 @@ const admissibleOutputs = []
     }
 
     return admissibleOutputs
-
-}
-
-/\*\*
-
-- Checks if a script contains a UFTP message
-  \*/
-  containsUftpMessage(scriptHex) {
-  // OP_RETURN is 0x6a in hex
-  if (!scriptHex.startsWith('6a')) {
-  return false
   }
 
+  /**
+   * Checks if a script contains a UFTP message
+   */
+  containsUftpMessage(scriptHex) {
+    // OP_RETURN is 0x6a in hex
+    if (!scriptHex.startsWith('6a')) {
+      return false
+    }
 
     // Check for "UFTP" marker - "UFTP" in hex is 55465450
     return scriptHex.includes('55465450')
+  }
 
-}
-
-/\*\*
-
-- Topic manager documentation
-  \*/
+  /**
+   * Topic manager documentation
+   */
   getDocumentation() {
-  return `# UFTP Message Topic Manager
+    return `# UFTP Message Topic Manager
 
 This Topic Manager tracks UFTP (USEF Flex Trading Protocol) messages on the BSV blockchain.
 
@@ -77,5 +72,5 @@ The Topic Manager recognizes all standard UFTP message types as defined by the S
 This overlay provides tamper-proof storage and verification of energy flexibility trading messages,
 creating an immutable audit trail for regulatory compliance and settlement purposes.
 `
-}
+  }
 }

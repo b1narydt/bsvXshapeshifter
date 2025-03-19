@@ -1,7 +1,7 @@
 import OverlayExpress from '@bsv/overlay-express'
 import dotenv from 'dotenv'
-import UftpMessageTopicManager from './topic-managers/UftpMessageTopicManager.js'
-import uftpMessageLookupServiceFactory from './lookup-services/UftpMessageLookupServiceFactory.js'
+import UftpMessageTopicManager from './src/overlay/topic-managers/UftpMessageTopicManager.js'
+import uftpMessageLookupServiceFactory from './src/overlay/lookup-services/UftpMessageLookupServiceFactory.js'
 
 // Load environment variables
 dotenv.config()

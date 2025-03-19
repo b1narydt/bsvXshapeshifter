@@ -25,6 +25,9 @@ class MessageSigner {
         }
       }
       
+      // Parse the XML to extract message properties
+      const messageProperties = await parseXml(xmlMessage);
+      
       // Sign the original message
       const signature = await identityManager.signMessage(
         senderDomain,
@@ -66,7 +69,7 @@ class MessageSigner {
         .replace(/<!-- BSV Certificates: [^-]+ -->/, '')
         .trim();
       
-      // Extract sender domain - this is a simplification
+      // Extract sender domain from UFTP XML
       const senderDomainMatch = originalXml.match(/SenderDomain="([^"]+)"/);
       if (!senderDomainMatch) {
         return { verified: false, reason: 'Cannot extract sender domain from message' };
@@ -97,7 +100,11 @@ class MessageSigner {
         }
       }
       
-      return { verified: true };
+      return { 
+        verified: true,
+        senderDomain,
+        certificateIds: certificates
+      };
     } catch (error) {
       console.error('Error verifying UFTP message:', error);
       return { verified: false, reason: `Verification error: ${error.message}` };

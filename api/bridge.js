@@ -1,4 +1,4 @@
-// api/bridge.js
+// api/uftp-bridge.js
 import express from 'express';
 import bodyParser from 'body-parser';
 import cors from 'cors';
@@ -6,6 +6,7 @@ import { Transaction } from '@bsv/sdk';
 import identityManager from '../src/wallet/identity.js';
 import certificateManager from '../src/wallet/certificates.js';
 import messageSigner from '../src/integration/message-signer.js';
+import { parseXml, buildXml } from '../src/integration/xml-utils.js';
 
 // Create an in-memory storage for UFTP messages
 const uftpMessages = [];
@@ -15,7 +16,7 @@ app.use(cors());
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.text({ type: 'application/xml', limit: '10mb' }));
 
-// New endpoint to create a wallet for a domain
+// Endpoint to create a wallet for a domain (DSO or AGR)
 app.post('/api/create-wallet', async (req, res) => {
   try {
     const { domain, existingRootKey } = req.body;
@@ -42,7 +43,7 @@ app.post('/api/create-wallet', async (req, res) => {
   }
 });
 
-// New endpoint to create a certificate
+// Endpoint to create a certificate for market participants
 app.post('/api/create-certificate', async (req, res) => {
   try {
     const { issuerDomain, subjectDomain, permissions } = req.body;
@@ -54,6 +55,7 @@ app.post('/api/create-certificate', async (req, res) => {
       });
     }
     
+    // For UFTP we grant permissions like "FlexRequest", "FlexOffer", etc.
     const certificate = await certificateManager.createCertificate(
       issuerDomain,
       subjectDomain,
@@ -73,7 +75,7 @@ app.post('/api/create-certificate', async (req, res) => {
   }
 });
 
-// Updated endpoint to record a signed UFTP message
+// Endpoint to record a UFTP message on the blockchain
 app.post('/api/record-message', async (req, res) => {
   try {
     const { messageType, messageXml, senderDomain, recipientDomain } = req.body;
@@ -98,8 +100,12 @@ app.post('/api/record-message', async (req, res) => {
     const tx = new Transaction();
     
     // Add OP_RETURN output with UFTP message data
+    // We use UFTP as a prefix to identify our messages in the blockchain
     const uftpPrefix = Buffer.from('UFTP', 'utf8').toString('hex');
     const typeBuffer = Buffer.from(messageType, 'utf8').toString('hex');
+    
+    // For large messages, we may need to truncate or split them
+    // Here we're taking the first 800 chars as a simple approach
     const dataBuffer = Buffer.from(signedXml.substring(0, 800), 'utf8').toString('hex');
     
     tx.addOutput({
@@ -118,6 +124,7 @@ app.post('/api/record-message', async (req, res) => {
       recipientDomain,
       timestamp: new Date(),
       signedXml,
+      rawTransaction: rawTx,
       verified: true // We just signed it, so it's verified
     };
     
@@ -127,7 +134,7 @@ app.post('/api/record-message', async (req, res) => {
       success: true, 
       transactionId: storedMessage.id,
       rawTransaction: rawTx,
-      message: 'Signed message recorded successfully'
+      message: 'Signed UFTP message recorded successfully'
     });
   } catch (error) {
     console.error('Error recording message:', error);
@@ -138,7 +145,7 @@ app.post('/api/record-message', async (req, res) => {
   }
 });
 
-// New endpoint to verify a UFTP message
+// Endpoint to verify a UFTP message
 app.post('/api/verify-message', async (req, res) => {
   try {
     const { signedXml } = req.body;
@@ -165,7 +172,7 @@ app.post('/api/verify-message', async (req, res) => {
   }
 });
 
-// Existing endpoint to query UFTP message history
+// Endpoint to query UFTP message history (requires payment)
 app.get('/api/messages', async (req, res) => {
   try {
     const { conversationId, messageType, senderDomain, recipientDomain } = req.query;
@@ -185,12 +192,56 @@ app.get('/api/messages', async (req, res) => {
       filteredMessages = filteredMessages.filter(msg => msg.recipientDomain === recipientDomain);
     }
     
+    if (conversationId) {
+      // For UFTP messages, we'd need to parse the XML to check the conversationId
+      // This is a simplified version
+      filteredMessages = filteredMessages.filter(msg => {
+        try {
+          // Basic check for conversationId in XML
+          return msg.signedXml.includes(`ConversationID="${conversationId}"`);
+        } catch (e) {
+          return false;
+        }
+      });
+    }
+    
     res.json({ 
       success: true, 
-      messages: filteredMessages 
+      messages: filteredMessages.map(msg => ({
+        id: msg.id,
+        messageType: msg.messageType,
+        senderDomain: msg.senderDomain,
+        recipientDomain: msg.recipientDomain,
+        timestamp: msg.timestamp,
+        // Don't include the full XML in the response list for brevity
+      }))
     });
   } catch (error) {
     console.error('Error querying messages:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Endpoint to get a specific message by ID
+app.get('/api/messages/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const message = uftpMessages.find(msg => msg.id === id);
+    
+    if (!message) {
+      return res.status(404).json({
+        success: false,
+        error: 'Message not found'
+      });
+    }
+    
+    res.json({ 
+      success: true, 
+      message
+    });
+  } catch (error) {
+    console.error('Error retrieving message:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -199,7 +250,7 @@ app.get('/api/messages', async (req, res) => {
 if (require.main === module) {
   const PORT = process.env.PORT || 3001;
   app.listen(PORT, () => {
-    console.log(`Shapeshifter-BSV bridge API running on port ${PORT}`);
+    console.log(`ShapeShifter-BSV bridge API running on port ${PORT}`);
   });
 }
 
