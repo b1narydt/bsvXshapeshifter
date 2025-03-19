@@ -1,8 +1,7 @@
 import { LookupService } from '@bsv/overlay'
 
-class UftpMessageLookupService extends LookupService {
+class UftpMessageLookupService  {
   constructor(db) {
-    super()
     this.db = db
     this.collection = db.collection('uftp_messages')
   }

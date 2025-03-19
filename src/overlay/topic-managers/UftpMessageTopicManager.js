@@ -1,6 +1,6 @@
 import { TopicManager } from '@bsv/overlay'
 
-export default class UftpMessageTopicManager implements TopicManager {
+export default class UftpMessageTopicManager  {
   async identifyAdmissibleOutputs(tx, outputs) {
     const admissibleOutputs = []
 
